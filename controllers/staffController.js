@@ -2,13 +2,17 @@ const Staff = require('../models/Staff');
 
 // Get all staff
 exports.getAllStaff = async (req, res) => {
-  try {
-    const staff = await Staff.find({}).populate('courses');
-    res.status(200).json(staff);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
+    try {
+      const staff = await Staff.find({}).populate({
+        path: 'courses',
+        model: 'Course'
+      });
+      res.status(200).json(staff);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  };
+  
 
 // Get single staff member
 exports.getStaffById = async (req, res) => {

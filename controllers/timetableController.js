@@ -81,6 +81,9 @@ exports.generateSchedule = async (req, res) => {
     // Get all courses and staff
     const courses = await Course.find({});
     const staff = await Staff.find({}).populate('courses');
+    console.log("Fetched Staff:", staff);
+    staff.forEach(s => console.log(`Staff ${s.name} has courses:`, s.courses));
+
     
     if (courses.length === 0) {
       return res.status(400).json({ message: 'No courses found to schedule' });
