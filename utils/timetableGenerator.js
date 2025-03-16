@@ -76,41 +76,47 @@ const generateTimetable = async (params) => {
             continue;
         }
 
-        // Try to distribute course hours across preferred days
         let preferredDays = course.preferredDays || workingDays;
         preferredDays = preferredDays.filter(day => workingDays.includes(day));
 
-        // If no valid preferred days, use all working days
         if (preferredDays.length === 0) {
             preferredDays = workingDays;
         }
 
         console.log(`Assigning course "${course.name}" (${course.hoursPerWeek} hours) to preferred days:`, preferredDays);
 
-        // Loop until we've assigned all hours for this course
         while (hoursAssigned < course.hoursPerWeek) {
             let assigned = false;
 
             for (const day of preferredDays) {
                 if (hoursAssigned >= course.hoursPerWeek) break;
 
-                // Find the day in the schedule
                 const daySchedule = schedule.find(s => s.day === day);
                 if (!daySchedule) continue;
+
+                let lastAssignedCourse = null; // Track last assigned course in the day's slots
 
                 for (let slotIndex = 0; slotIndex < daySchedule.slots.length; slotIndex++) {
                     if (hoursAssigned >= course.hoursPerWeek) break;
 
                     const slot = daySchedule.slots[slotIndex];
-                    if (slot.course) continue; // Skip if slot is already assigned
+                    if (slot.course) {
+                        lastAssignedCourse = slot.course; // Store last assigned course
+                        continue; // Skip if already assigned
+                    }
 
-                    // Find an available staff member for this slot
+                    // Ensure no consecutive slots have the same course
+                    if (lastAssignedCourse === course._id) {
+                        console.log(`Skipping consecutive slot for "${course.name}" on ${day}`);
+                        lastAssignedCourse = null; // Reset to allow next course
+                        continue;
+                    }
+
                     let assignedStaffId = null;
 
                     for (const staffId of staffIds) {
                         const staffAvail = staffAvailability[staffId];
 
-                        // Check if staff is available on this day and has hours left
                         if (staffAvail.availableDays.includes(day) &&
                             staffAvail.assignedHours < staffAvail.maxHours) {
                             assignedStaffId = staffId;
@@ -125,12 +131,12 @@ const generateTimetable = async (params) => {
                         hoursAssigned++;
                         assigned = true;
 
+                        lastAssignedCourse = course._id; // Update last assigned course for next slot
                         console.log(`Assigned "${course.name}" to ${day} (${slot.time.start} - ${slot.time.end}) with staff ${assignedStaffId}`);
                     }
                 }
             }
 
-            // If we couldn't assign any more slots, break to avoid infinite loop
             if (!assigned) {
                 console.warn(`Could only assign ${hoursAssigned}/${course.hoursPerWeek} hours for course: ${course.name}`);
                 break;
